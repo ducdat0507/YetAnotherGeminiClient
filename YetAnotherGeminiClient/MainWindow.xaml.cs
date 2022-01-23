@@ -456,7 +456,7 @@ namespace YetAnotherGeminiClient
             if (e.Key == Key.Enter)
             {
                 MainDocument.Focus();
-                Tabs[CurrentTab].Worker.Navigate(AddressBox.Text);
+                Tabs[CurrentTab].Navigate(AddressBox.Text);
             }
         }
         private void OnMenuButtonClick(object sender, RoutedEventArgs e)
