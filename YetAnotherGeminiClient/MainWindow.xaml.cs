@@ -352,10 +352,52 @@ namespace YetAnotherGeminiClient
                     {
                         string[] content = line.Split('\t');
                         if (currentParagraph.Inlines.Count > 0) currentParagraph.Inlines.Add(new LineBreak());
-                        if (content.Length >= 4) { 
-                            currentParagraph.Inlines.Add(new Run(content[0].Substring(1))); 
+                        if (content.Length >= 4)
+                        {
+                            char kind = content[0][0];
+                            string text = content[0].Substring(1);
+                            if (kind != 'i')
+                            {
+                                Uri uri;
+                                bool valid = Uri.TryCreate(content[1].ToLowerInvariant().StartsWith("url:") ?
+                                    content[1].Substring(4) :
+                                    "gopher://" + content[2] + ":" + content[3] + "/" + kind + content[1], UriKind.RelativeOrAbsolute, out uri);
+                                Hyperlink hp;
+                                currentParagraph.Inlines.Add(hp = new Hyperlink(new Run(text)));
+                                hp.Click += (src, args) =>
+                                {
+                                    if (uri.Scheme == "gemini" || uri.Scheme == "gopher")
+                                    {
+                                        current.Navigate(uri.AbsoluteUri);
+                                        AddressBox.Text = uri.AbsoluteUri;
+                                    }
+                                    else
+                                    {
+                                        Process p = new Process();
+                                        p.StartInfo.UseShellExecute = true;
+                                        p.StartInfo.FileName = uri.AbsoluteUri;
+                                        p.Start();
+                                    }
+                                };
+                            }
+                            else
+                            {
+                                currentParagraph.Inlines.Add(new Run(text));
+                            }
                         }
                     }
+                }
+                else if (worker.Type == DocumentType.TEXT)
+                {
+                    currentParagraph = new Paragraph()
+                    {
+                        TextAlignment = TextAlignment.Left,
+                        Margin = new Thickness(0),
+                        FontSize = 16,
+                        FontFamily = new FontFamily("Consolas"),
+                    };
+                    Document.Blocks.Add(currentParagraph);
+                    currentParagraph.Inlines.Add(worker.Output);
                 }
 
                 DocumentScrollViewer = (ScrollViewer)DocumentViewer.Template.FindName("PART_ContentHost", DocumentViewer);
