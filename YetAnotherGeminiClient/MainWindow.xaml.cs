@@ -319,10 +319,16 @@ namespace YetAnotherGeminiClient
                                 }
                                 else
                                 {
-                                    Process p = new Process();
-                                    p.StartInfo.UseShellExecute = true;
-                                    p.StartInfo.FileName = uri.AbsoluteUri;
-                                    p.Start();
+                                    try
+                                    {
+                                        Process p = new Process();
+                                        p.StartInfo.UseShellExecute = true;
+                                        p.StartInfo.FileName = uri.AbsoluteUri;
+                                        p.Start();
+                                    }
+                                    catch
+                                    {
+                                    }
                                 }
                             };
                         }
@@ -336,6 +342,27 @@ namespace YetAnotherGeminiClient
                             Document.Blocks.Add(currentParagraph);
                             currentParagraph.Inlines.Add(new Run(line.Trim()));
                         }
+                    }
+                    if (worker.State == DocumentState.INPUT_REQUESTED)
+                    {
+                        TextBox tb = new TextBox()
+                        {
+                            Margin = new Thickness(0, 10, 0, 0),
+                            Style = (Style)Resources["SearchTextBox"],
+                        };
+                        BlockUIContainer cont = new BlockUIContainer(tb);
+                        Document.Blocks.Add(cont);
+                        cont.KeyDown += (src, args) =>
+                        {
+                            if (args.Key == Key.Enter)
+                            {
+                                current.Navigate(new UriBuilder(worker.Uri)
+                                {
+                                    Query = Uri.EscapeDataString(tb.Text)
+                                }.ToString());
+                                AddressBox.Text = worker.Uri.AbsoluteUri;
+                            }
+                        };
                     }
                 }
                 else if (worker.Type == DocumentType.GOPHER)
@@ -455,8 +482,39 @@ namespace YetAnotherGeminiClient
         {
             if (e.Key == Key.Enter)
             {
+                Uri uri;
+                bool valid = Uri.TryCreate(AddressBox.Text, UriKind.Absolute, out uri);
+                if (!valid)
+                {
+                    try
+                    {
+                        uri = new UriBuilder(AddressBox.Text)
+                        {
+                            Scheme = "gemini",
+                            Port = -1,
+                        }.Uri;
+                        valid = true;
+                    }
+                    catch
+                    {
+
+                    }
+                }
+
+                if (!valid)
+                    Tabs[CurrentTab].Navigate("gemini://geminispace.info/search?" + Uri.EscapeDataString(AddressBox.Text));
+                else if (uri.Scheme == "gemini" || uri.Scheme == "gopher")
+                    Tabs[CurrentTab].Navigate(uri.AbsoluteUri);
+                else
+                {
+                    Process p = new Process();
+                    p.StartInfo.UseShellExecute = true;
+                    p.StartInfo.FileName = uri.AbsoluteUri;
+                    p.Start();
+                }
+
                 MainDocument.Focus();
-                Tabs[CurrentTab].Navigate(AddressBox.Text);
+                AddressBox.Text = Tabs[CurrentTab].Worker.Uri.AbsoluteUri;
             }
         }
         private void OnMenuButtonClick(object sender, RoutedEventArgs e)

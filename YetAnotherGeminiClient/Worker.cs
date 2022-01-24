@@ -59,21 +59,32 @@ namespace YetAnotherGeminiClient
                         }
 
                         string header = Output.Substring(0, Output.IndexOf("\r\n"));
+                        short status = Int16.Parse(header.Substring(0, header.IndexOf(" ")));
                         Output = Output.Substring(Output.IndexOf("\r\n") + 1);
-                        if (header.StartsWith("20 "))
+                        Console.WriteLine("\"" + status + "\"");
+                        if (status == 20)
                         {
                             State = DocumentState.OK;
+                            Type = DocumentType.GEMINI;
+                            if (OnSuccess != null) OnSuccess(this, null);
+                        }
+                        else if (status == 10 || status == 11)
+                        {
+                            State = DocumentState.INPUT_REQUESTED;
+                            Type = DocumentType.GEMINI;
+                            Output = header.Substring(2).Trim();
+                            if (OnSuccess != null) OnSuccess(this, null);
                         }
                         else
                         {
                             State = DocumentState.ERROR;
+                            Type = DocumentType.GEMINI;
                             Output = header.Substring(2).Trim();
+                            if (OnError != null) OnError(this, null);
                         }
 
                         Client.Close();
-                        Type = DocumentType.GEMINI;
 
-                        if (OnSuccess != null) OnSuccess(this, null);
                     }
                     else if (Uri.Scheme == "gopher")
                     {
@@ -146,6 +157,7 @@ namespace YetAnotherGeminiClient
     public enum DocumentState
     {
         OK,
+        INPUT_REQUESTED,
         ERROR,
     }
 }
