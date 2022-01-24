@@ -60,7 +60,7 @@ namespace YetAnotherGeminiClient
 
                         string header = Output.Substring(0, Output.IndexOf("\r\n"));
                         short status = Int16.Parse(header.Substring(0, header.IndexOf(" ")));
-                        Output = Output.Substring(Output.IndexOf("\r\n") + 1);
+                        Output = Output.Substring(Output.IndexOf("\r\n") + 1).Trim();
                         Console.WriteLine("\"" + status + "\"");
                         if (status == 20)
                         {
@@ -72,14 +72,90 @@ namespace YetAnotherGeminiClient
                         {
                             State = DocumentState.INPUT_REQUESTED;
                             Type = DocumentType.GEMINI;
-                            Output = header.Substring(2).Trim();
+                            Output = 
+                                "# Awaiting user input...\r\n\r\n" +
+                                "This page is asking for your input. Enter yours below, then press Enter to continue.\r\n\r\n" +
+                                "> GEMINI STATUS " + status + "\r\n" +
+                                "> " + header.Substring(2).Trim() + "\r\n";
                             if (OnSuccess != null) OnSuccess(this, null);
                         }
                         else
                         {
-                            State = DocumentState.ERROR;
+                            switch (status)
+                            {
+                                case 40:
+                                    State = DocumentState.TEMPORARY_ERROR;
+                                    Output =
+                                        "# An error happened\r\n\r\n" +
+                                        "There was an unspecified error preventing you from accessing this page. There might be some useful information below.";
+                                    break;
+                                case 41:
+                                    State = DocumentState.SERVER_UNAVAILABLE;
+                                    Output =
+                                        "# Server unavailable\r\n\r\n" +
+                                        "Looks like the server doesn't feel like responding right now. Maybe try again later?";
+                                    break;
+                                case 42:
+                                    State = DocumentState.CGI_ERROR;
+                                    Output =
+                                        "# CGI error\r\n\r\n" +
+                                        "The server made a mistake while trying to process the content for you. A reload might do the trick.";
+                                    break;
+                                case 43:
+                                    State = DocumentState.PROXY_ERROR;
+                                    Output =
+                                        "# Proxy error\r\n\r\n" +
+                                        "The server made a mistake while trying to convert the content you requested to a useful one. A reload might do the trick.";
+                                    break;
+                                case 44:
+                                    int time = -1;
+                                    int.TryParse(header.Substring(2).Trim(), out time);
+                                    State = DocumentState.RATE_LIMITED;
+                                    Output =
+                                        "# You're being rate-limited\r\n\r\n" +
+                                        "The server would like you not to send another request for " + time + " seconds. Maybe the server is being mad at you?";
+                                    break;
+                                case 50:
+                                    State = DocumentState.PERMANENT_ERROR;
+                                    Output =
+                                        "# An error happened\r\n\r\n" +
+                                        "There was an unspecified error preventing you from accessing this page. There might be some useful information below.";
+                                    break;
+                                case 51:
+                                    State = DocumentState.NOT_FOUND;
+                                    Output =
+                                        "# Not found\r\n\r\n" +
+                                        "There wasn't anything here. Lost, gone or wrong address?";
+                                    break;
+                                case 52:
+                                    State = DocumentState.GONE;
+                                    Output =
+                                        "# Gone\r\n\r\n" +
+                                        "There's no longer anything here. Everything was lost.";
+                                    break;
+                                case 53:
+                                    State = DocumentState.PROXY_UNAVAILABLE;
+                                    Output =
+                                        "# Proxy unavailable\r\n\r\n" +
+                                        "Sorry user, but the content you're looking for is in another server/protocol.";
+                                    break;
+                                case 59:
+                                    State = DocumentState.BAD_REQUEST;
+                                    Output =
+                                        "# Bad request\r\n\r\n" +
+                                        "Your request could not be parsed by the server. Could you recheck the address for any typos?";
+                                    break;
+                                default:
+                                    State = DocumentState.BAD_HEADER;
+                                    Output =
+                                        "# Unknown status code\r\n\r\n" +
+                                        "The server responded with a status code which YAGC did not know. There might be some useful information below.";
+                                    break;
+                            }
                             Type = DocumentType.GEMINI;
-                            Output = header.Substring(2).Trim();
+                            Output += "\r\n\r\n" +
+                                "> GEMINI STATUS " + status + "\r\n" +
+                                "> " + header.Substring(2).Trim();
                             if (OnError != null) OnError(this, null);
                         }
 
@@ -158,6 +234,21 @@ namespace YetAnotherGeminiClient
     {
         OK,
         INPUT_REQUESTED,
+
         ERROR,
+
+        BAD_HEADER,
+
+        TEMPORARY_ERROR,
+        SERVER_UNAVAILABLE,
+        CGI_ERROR,
+        PROXY_ERROR,
+        RATE_LIMITED,
+
+        PERMANENT_ERROR,
+        NOT_FOUND,
+        GONE,
+        PROXY_UNAVAILABLE,
+        BAD_REQUEST,
     }
 }

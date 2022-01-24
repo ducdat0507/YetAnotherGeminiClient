@@ -103,6 +103,7 @@ namespace YetAnotherGeminiClient
             }
             else if (id == CurrentTab)
             {
+                CurrentTab = Math.Min(CurrentTab, Tabs.Count - 1);
                 Tabs[CurrentTab].TabButton.Tag = "active";
                 UpdateDocument();
             }
@@ -231,7 +232,7 @@ namespace YetAnotherGeminiClient
                             ContentTable.Children.Add(b = new Button()
                             {
                                 Content = line.Substring(3).Trim(),
-                                Padding = new Thickness(24, 5, 10, 5),
+                                Padding = new Thickness(30, 5, 10, 5),
                                 Style = (Style)Resources["ContentTableButton"],
                             });
                             b.Click += (src, args) =>
@@ -255,7 +256,7 @@ namespace YetAnotherGeminiClient
                             ContentTable.Children.Add(b = new Button()
                             {
                                 Content = line.Substring(2).Trim(),
-                                Padding = new Thickness(16, 5, 10, 5),
+                                Padding = new Thickness(20, 5, 10, 5),
                                 Style = (Style)Resources["ContentTableButton"],
                             });
                             b.Click += (src, args) =>
@@ -347,7 +348,6 @@ namespace YetAnotherGeminiClient
                     {
                         TextBox tb = new TextBox()
                         {
-                            Margin = new Thickness(0, 10, 0, 0),
                             Style = (Style)Resources["SearchTextBox"],
                         };
                         BlockUIContainer cont = new BlockUIContainer(tb);
